@@ -20,7 +20,6 @@ public class AgentAIController {
 
     private final AiAgent aiAgent;
 
-    // ── POST /api/upload ──────────────────────────────────────────
     @PostMapping("/docs/upload")
     public ResponseEntity<Map<String, String>> upload(
             @RequestParam("file") MultipartFile file) {
@@ -33,7 +32,6 @@ public class AgentAIController {
         }
     }
 
-    // ── POST /api/ask ─────────────────────────────────────────────
     @PostMapping("/chat/ask")
     public ResponseEntity<Map<String, String>> ask(
             @RequestBody Map<String, String> body) {
@@ -50,14 +48,12 @@ public class AgentAIController {
         return ResponseEntity.ok(Map.of("answer", answer));
     }
 
-    // ── GET /api/history/{sessionId} ──────────────────────────────
     @GetMapping("/history/{sessionId}")
     public ResponseEntity<List<ChatMessage>> history(
             @PathVariable String sessionId) {
         return ResponseEntity.ok(aiAgent.getHistory(sessionId));
     }
 
-    // ── DELETE /api/history/{sessionId} ───────────────────────────
     @DeleteMapping("/history/{sessionId}")
     public ResponseEntity<Map<String, String>> clear(
             @PathVariable String sessionId) {

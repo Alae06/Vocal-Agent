@@ -28,7 +28,6 @@ public class AiAgent {
     private final VectorStore vectorStore;
     private final ChatMessageRepository chatMessageRepository;
 
-    // Mémoire de conversation par session
     private final Map<String, List<Message>> sessionHistories = new ConcurrentHashMap<>();
 
     public AiAgent(
@@ -42,7 +41,6 @@ public class AiAgent {
         this.chatMessageRepository = chatMessageRepository;
     }
 
-    // ── Upload et indexation du document ─────────────────────────
     public String uploadDocument(MultipartFile file) throws IOException {
         try {
             documentUploadIndexor.loadFile(file);
@@ -52,12 +50,10 @@ public class AiAgent {
         }
     }
 
-    // ── Poser une question avec mémoire et RAG ────────────────────
     public String ask(String question, String sessionId) {
         List<Message> history = sessionHistories
                 .computeIfAbsent(sessionId, k -> new ArrayList<>());
 
-        // 1. Chercher les documents (RAG)
         List<org.springframework.ai.document.Document> docs = vectorStore.similaritySearch(question);
 
         StringBuilder context = new StringBuilder();
@@ -66,7 +62,6 @@ public class AiAgent {
             docs.forEach(doc -> context.append(doc.getText()).append("\n---\n"));
         }
 
-        // 2. INSTRUCTIONS DE FORMATAGE (Le secret est ici)
         String systemInstructions = """
     RÔLE : Expert en analyse de documents. Ton unique but est de produire un texte Markdown STRICTEMENT STRUCTURE.
     
@@ -88,19 +83,15 @@ public class AiAgent {
     INTERDICTION : Ne produis jamais de bloc de texte continu comme un paragraphe.
     """;
 
-        // 3. Préparer les messages pour le modèle
         List<Message> messagesToSend = new ArrayList<>();
         messagesToSend.add(new org.springframework.ai.chat.messages.SystemMessage(systemInstructions));
 
-        // Ajouter l'historique (qui contient les anciens UserMessages et AssistantMessages)
         messagesToSend.addAll(history);
 
-        // Ajouter la nouvelle question avec le contexte et un RAPPEL DE FORMATAGE à la fin
         String promptWithContext = context + "\n\nQUESTION DE L'UTILISATEUR : " + question + 
                 "\n\nN'OUBLIE PAS : Utilise des titres '### [Module]' sur de nouvelles lignes pour structurer ta réponse.";
         messagesToSend.add(new UserMessage(promptWithContext));
 
-        // 4. Appel Mistral
         String answer = chatClient
                 .prompt(new Prompt(messagesToSend))
                 .call()
@@ -108,11 +99,9 @@ public class AiAgent {
 
         System.out.println("DEBUG - Réponse brute de l'agent :\n" + answer);
 
-        // Mettre à jour l'historique réel (on ne garde que l'échange pur, sans les instructions système répétées)
-        history.add(new UserMessage(question)); // On stocke la question simple pour la mémoire
+        history.add(new UserMessage(question)); 
         history.add(new AssistantMessage(answer));
 
-        // Sauvegarder en base de données
         chatMessageRepository.save(ChatMessage.builder()
                 .question(question)
                 .answer(answer)
@@ -124,12 +113,10 @@ public class AiAgent {
         return answer;
     }
 
-    // ── Historique de la session ──────────────────────────────────
     public List<ChatMessage> getHistory(String sessionId) {
         return chatMessageRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
     }
 
-    // ── Effacer la conversation ───────────────────────────────────
     public void clearHistory(String sessionId) {
         chatMessageRepository.deleteBySessionId(sessionId);
         sessionHistories.remove(sessionId);

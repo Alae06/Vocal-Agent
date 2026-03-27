@@ -19,7 +19,6 @@ public class AiAgentProjetAcademiqueApplication implements WebMvcConfigurer {
         SpringApplication.run(AiAgentProjetAcademiqueApplication.class, args);
     }
 
-    // ── SimpleVectorStore (injecté dans DocumentUploadIndexor) ────
     @Bean
     @Primary
     public SimpleVectorStore simpleVectorStore(
@@ -27,14 +26,12 @@ public class AiAgentProjetAcademiqueApplication implements WebMvcConfigurer {
         return SimpleVectorStore.builder(embeddingModel).build();
     }
 
-    // ── VectorStore = même bean (pour AiAgent.similaritySearch) ──
     @Bean
     public org.springframework.ai.vectorstore.VectorStore vectorStore(
             SimpleVectorStore simpleVectorStore) {
         return simpleVectorStore;
     }
 
-    // ── Mistral ChatClient ────────────────────────────────────────
     @Bean
     @Qualifier("mistralClient")
     public ChatClient mistralChatClient(MistralAiChatModel mistralModel) {
@@ -50,7 +47,6 @@ public class AiAgentProjetAcademiqueApplication implements WebMvcConfigurer {
                 .build();
     }
 
-    // ── CORS ──────────────────────────────────────────────────────
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
